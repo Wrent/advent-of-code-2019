@@ -1,7 +1,7 @@
 import kotlin.math.floor
 
 fun main() {
-    val res = INPUT
+    val res = INPUT1
         .split("\n")
         .map { it.toInt() }
         .map { it / 3 }
@@ -11,7 +11,7 @@ fun main() {
     println(res)
 }
 
-const val INPUT = """148319
+const val INPUT1 = """148319
 54894
 105685
 136247

@@ -1,6 +1,6 @@
 
 fun main(args: Array<String>) {
-    val res = INPUT
+    val res = INPUT1
     	.split("\n")
         .map { it.toInt() }
     	.map {
