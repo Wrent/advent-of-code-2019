@@ -31,30 +31,41 @@ private fun compute(noun: Int, verb: Int) {
 
     var index = 0
     while (true) {
-        processPosition(index, input)
-        index += 4
+        val step = processPosition(index, input)
+        index += step + 1
     }
 }
 
-fun processPosition(index: Int, data: MutableList<Int>) {
-    when (data.get(index)) {
-        1 -> {
+fun processPosition(index: Int, data: MutableList<Int>) : Int {
+    val instruction = instruction(data.get(index))
+    when (instruction) {
+        Instruction.ADD -> {
             val value = data.get(data.get(index + 1)) + data.get(data.get(index + 2))
             data.set(data.get(index + 3), value)
         }
-        2 -> {
+        Instruction.MULTIPLY -> {
             val value = data.get(data.get(index + 1)) * data.get(data.get(index + 2))
             data.set(data.get(index + 3), value)
         }
-        99 -> throw ResultException(data.get(0))
-        else -> throw RuntimeException("error")
+        Instruction.HALT -> throw ResultException(data.get(0))
     }
+    return instruction.length
 }
 
 class ResultException(val result: Int) : Throwable()
 
 fun parse(): MutableList<Int> {
     return INPUT2.split(",").map { it.toInt() }.toMutableList()
+}
+
+fun instruction(value: Int) : Instruction {
+    return Instruction.values().find { it.value == value } ?: throw RuntimeException("invalid instruction")
+}
+
+enum class Instruction(val value: Int, val length: Int) {
+    ADD(1, 3),
+    MULTIPLY(2, 3),
+    HALT(99, 0);
 }
 
 const val INPUT2 =
