@@ -1,5 +1,17 @@
-fun main(args: Array<String>) {
-	val input = """148319
+import kotlin.math.floor
+
+fun main() {
+    val res = INPUT
+        .split("\n")
+        .map { it.toInt() }
+        .map { it / 3 }
+        .map { floor(it.toDouble()) }
+        .map { it - 2 }
+        .sum()
+    println(res)
+}
+
+const val INPUT = """148319
 54894
 105685
 136247
@@ -99,12 +111,4 @@ fun main(args: Array<String>) {
 100155
 54601
 115686"""
-    val res = input
-    	.split("\n")
-        .map { it.toInt() }
-    	.map { it / 3 }
-    	.map { kotlin.math.floor(it.toDouble()) }
-    	.map { it - 2 }
-        .sum()
-    println(res)
-}
+
