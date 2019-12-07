@@ -5,7 +5,7 @@ fun main() {
 
     var index = 0
     while (true) {
-        val instr = parseInstr(index, data)
+        val instr = parseInstr(index, data) { input }
         index = instr.apply(data, index)
     }
 }
@@ -18,6 +18,7 @@ enum class ParameterMode {
 }
 
 var input = 5
+var output = 0
 
 sealed class Instr(val params: List<Param>) {
     abstract fun apply(data: MutableList<Int>, index: Int): Int
@@ -59,7 +60,8 @@ class Input(val input: Int, params: List<Param>) : Instr(params) {
 
 class Output(params: List<Param>) : Instr(params) {
     override fun apply(data: MutableList<Int>, index: Int): Int {
-        println(pval(params[0], data))
+        output = pval(params[0], data)
+        println(output)
         return index + 2
     }
 }
@@ -106,7 +108,7 @@ class Equals(params: List<Param>) : Instr(params) {
     }
 }
 
-fun parseInstr(index: Int, data: MutableList<Int>): Instr {
+fun parseInstr(index: Int, data: MutableList<Int>, inputSupplier: () -> Int): Instr {
     val prefixed = prefix(data[index])
     val opcode = prefixed.substring(prefixed.length - 2).toInt()
     val modes = prefixed.substring(0, 3).reversed().map { parseMode(it) }
@@ -127,7 +129,7 @@ fun parseInstr(index: Int, data: MutableList<Int>): Instr {
             )
         )
         3 -> Input(
-            input, listOf(
+            inputSupplier(), listOf(
                 Param(data[index + 1], modes[0])
             )
         )
