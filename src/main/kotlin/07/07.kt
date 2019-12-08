@@ -1,6 +1,8 @@
+import java.lang.IllegalStateException
+import java.util.*
+
 fun main() {
     var permutations = getPermutations(listOf(0, 1, 2, 3, 4).toIntArray())
-    println(permutations)
     var max = 0
 
     permutations.forEach {
@@ -10,37 +12,68 @@ fun main() {
     println(max)
 
     println("second part")
-    permutations = getPermutations(listOf(5,6,7,8,9).toIntArray())
-    println(permutations)
+    permutations = getPermutations(listOf(5, 6, 7, 8, 9).toIntArray())
     max = 0
 
     permutations.forEach {
-        val amplifierA = Amplifier(getData(), 0)
-        val amplifierB = Amplifier(getData(), 0)
-        val amplifierC = Amplifier(getData(), 0)
-        val amplifierD = Amplifier(getData(), 0)
-        val amplifierE = Amplifier(getData(), 0)
-
-        val amplifiers = listOf(amplifierA, amplifierB, amplifierC, amplifierD, amplifierE).iterator()
-        var current = amplifiers.next()
-
-        try {
-            while (true) {
-                val instr = parseInstr(index, data) { if (inputCallCnt++ == 0) a else b }
-                index = instr.apply(data, index)
-            }
-        } catch (ex: RuntimeException) {
-            println("amplifier stopped")
-        }
-
-
+        val res = evaluatePermutation(it, INPUT7)
         if (res > max) max = res
     }
     println(max)
 
 }
+ fun evaluatePermutation(it: IntArray, input: String): Int {
+    val amplifierE = Amplifier(getData(input), 0, null)
+    val amplifierD = Amplifier(getData(input), 0, amplifierE)
+    val amplifierC = Amplifier(getData(input), 0, amplifierD)
+    val amplifierB = Amplifier(getData(input), 0, amplifierC)
+    val amplifierA = Amplifier(getData(input), 0, amplifierB)
 
-data class Amplifier(val data: MutableList<Int>, var currentIndex: Int)
+    amplifierE.next = amplifierA
+
+    amplifierA.queue.add(it[0])
+    amplifierA.queue.add(0)
+    amplifierB.queue.add(it[1])
+    amplifierC.queue.add(it[2])
+    amplifierD.queue.add(it[3])
+    amplifierE.queue.add(it[4])
+
+    var current = amplifierA
+
+    while (true) {
+        try {
+            val instr = parseInstr(current.index, current.data, { current.queue.poll() }, { output ->
+                current.next?.queue?.add(output)
+                current.lastOutput = output
+            })
+            current.index = instr.apply(current.data, current.index)
+        } catch (ex: IllegalStateException) {
+            current = current.next!!
+        } catch (ex: RuntimeException) {
+            println("amplifier stopped")
+            current.isStopped = true
+            val tmp = current
+            while (current.isStopped) {
+                current = current.next!!
+                if (current == tmp) {
+                    break
+                }
+            }
+            if (current.isStopped) {
+                break
+            }
+        }
+    }
+
+    val res = amplifierE.lastOutput
+    return res
+}
+
+class Amplifier(val data: MutableList<Int>, var index: Int, var next: Amplifier?) {
+    val queue: Queue<Int> = LinkedList()
+    var lastOutput = 0
+    var isStopped = false
+}
 
 fun getPermutations(input: IntArray): List<IntArray> {
     val indexes = IntArray(input.size)
@@ -75,12 +108,12 @@ fun swap(input: IntArray, a: Int, b: Int) {
 }
 
 fun evaluateAmplifier(a: Int, b: Int): Int {
-    val data = getData()
+    val data = getData(INPUT7)
     var index = 0
     var inputCallCnt = 0
     try {
         while (true) {
-            val instr = parseInstr(index, data) { if (inputCallCnt++ == 0) a else b }
+            val instr = parseInstr(index, data, { if (inputCallCnt++ == 0) a else b }, {})
             index = instr.apply(data, index)
         }
     } catch (ex: RuntimeException) {
@@ -88,8 +121,8 @@ fun evaluateAmplifier(a: Int, b: Int): Int {
     }
 }
 
-fun getData(): MutableList<Int> {
-    return INPUT7.split(",").map { it.toInt() }.toMutableList()
+fun getData(input: String): MutableList<Int> {
+    return input.split(",").map { it.toInt() }.toMutableList()
 }
 
 const val INPUT7 = "3,8,1001,8,10,8,105,1,0,0,21,46,67,76,97,118,199,280,361,442,99999,3,9,1002,9,3,9,101,4,9,9,102,3,9,9,1001,9,3,9,1002,9,2,9,4,9,99,3,9,102,2,9,9,101,5,9,9,1002,9,2,9,101,2,9,9,4,9,99,3,9,101,4,9,9,4,9,99,3,9,1001,9,4,9,102,2,9,9,1001,9,4,9,1002,9,5,9,4,9,99,3,9,102,3,9,9,1001,9,2,9,1002,9,3,9,1001,9,3,9,4,9,99,3,9,101,1,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,2,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,1,9,9,4,9,99,3,9,102,2,9,9,4,9,3,9,101,2,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,102,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,101,2,9,9,4,9,99,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1002,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,99,3,9,1001,9,2,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,1,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,99,3,9,1002,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,102,2,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,1002,9,2,9,4,9,99"
