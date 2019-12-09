@@ -1,174 +1,201 @@
 import java.lang.RuntimeException
+import java.math.BigInteger
 
 fun main() {
-    val data = INPUT5.split(",").map { it.toInt() }.toMutableList()
+    val data = mutableMapOf<BigInteger, BigInteger>()
+        INPUT5.split(",").map { it.toBigInteger() }.toMutableList().mapIndexed { index, l -> data[index.toBigInteger()] = l}
 
-    var index = 0
+    var index = BigInteger.ZERO
     while (true) {
         val instr = parseInstr(index, data, { input }, {})
         index = instr.apply(data, index)
     }
 }
 
-data class Param(val value: Int, val mode: ParameterMode)
+data class Param(val value: BigInteger, val mode: ParameterMode)
 
 enum class ParameterMode {
     POSITION,
-    IMMEDIATE
+    IMMEDIATE,
+    RELATIVE
 }
 
-var input = 5
-var output = 0
+var input = 5.toBigInteger()
+var output = 0.toBigInteger()
+var relativeBase = 0.toBigInteger()
 
 sealed class Instr(val params: List<Param>) {
-    abstract fun apply(data: MutableList<Int>, index: Int): Int
+    abstract fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger
 
-    fun pval(param: Param, data: MutableList<Int>): Int {
+    fun pval(param: Param, data: MutableMap<BigInteger, BigInteger>): BigInteger {
         return when (param.mode) {
-            ParameterMode.POSITION -> data[param.value]
+            ParameterMode.POSITION -> data[param.value] ?: BigInteger.ZERO
             ParameterMode.IMMEDIATE -> param.value
+            ParameterMode.RELATIVE -> data[relativeBase + param.value] ?: BigInteger.ZERO
+        }
+    }
+
+    fun paddr(param: Param) : BigInteger {
+        return when (param.mode) {
+            ParameterMode.POSITION -> param.value
+            ParameterMode.IMMEDIATE -> param.value
+            ParameterMode.RELATIVE -> relativeBase + param.value
         }
     }
 }
 
 class Add(params: List<Param>) : Instr(params) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
-        data[params[2].value] = pval(params[0], data) + pval(params[1], data)
-        return index + 4
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
+        data[paddr(params[2])] = pval(params[0], data) + pval(params[1], data)
+        return index + 4.toBigInteger()
     }
 }
 
 class Multiply(params: List<Param>) : Instr(params) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
-        data[params[2].value] = pval(params[0], data) * pval(params[1], data)
-        return index + 4
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
+        data[paddr(params[2])] = pval(params[0], data) * pval(params[1], data)
+        return index + 4.toBigInteger()
     }
 }
 
 class Halt : Instr(listOf()) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
-        throw RuntimeException("Halt")
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
+        throw HaltException()
     }
 }
 
-class Input(val input: Int?, params: List<Param>) : Instr(params) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
+class Input(val input: BigInteger?, params: List<Param>) : Instr(params) {
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
         if (input == null) {
             throw NoInputException()
         }
-        data[params[0].value] = input
-        return index + 2
+        data[paddr(params[0])] = input
+        return index + 2.toBigInteger()
     }
 }
 
-class Output(params: List<Param>, val onOutput: (Int) -> Unit) : Instr(params) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
+class Output(params: List<Param>, val onOutput: (BigInteger) -> Unit) : Instr(params) {
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
         output = pval(params[0], data)
         onOutput(output)
         println(output)
-        return index + 2
+        return index + 2.toBigInteger()
     }
 }
 
 class JumpIfTrue(params: List<Param>) : Instr(params) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
-        if (pval(params[0], data) != 0) {
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
+        if (pval(params[0], data) != BigInteger.ZERO) {
             return pval(params[1], data)
         } else {
-            return index + 3
+            return index + 3.toBigInteger()
         }
     }
 }
 
 class JumpIfFalse(params: List<Param>) : Instr(params) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
-        if (pval(params[0], data) == 0) {
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
+        if (pval(params[0], data) == BigInteger.ZERO) {
             return pval(params[1], data)
         } else {
-            return index + 3
+            return index + 3.toBigInteger()
         }
     }
 }
 
 class LessThan(params: List<Param>) : Instr(params) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
         if (pval(params[0], data) < pval(params[1], data)) {
-            data[params[2].value] = 1
+            data[paddr(params[2])] = BigInteger.ONE
         } else {
-            data[params[2].value] = 0
+            data[paddr(params[2])] = BigInteger.ZERO
         }
-        return index + 4
+        return index + 4.toBigInteger()
     }
 }
 
 class Equals(params: List<Param>) : Instr(params) {
-    override fun apply(data: MutableList<Int>, index: Int): Int {
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
         if (pval(params[0], data) == pval(params[1], data)) {
-            data[params[2].value] = 1
+            data[paddr(params[2])] = BigInteger.ONE
         } else {
-            data[params[2].value] = 0
+            data[paddr(params[2])] = BigInteger.ZERO
         }
-        return index + 4
+        return index + 4.toBigInteger()
+    }
+}
+
+class AdjustRelativeBase(params: List<Param>) : Instr(params) {
+    override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
+        relativeBase += pval(params[0], data)
+        return index + 2.toBigInteger()
     }
 }
 
 class NoInputException : Throwable()
 
-fun parseInstr(index: Int, data: MutableList<Int>, inputSupplier: () -> Int, onOutput: (Int) -> Unit): Instr {
-    val prefixed = prefix(data[index])
+class HaltException : Throwable()
+
+fun parseInstr(index: BigInteger, data: MutableMap<BigInteger, BigInteger>, inputSupplier: () -> BigInteger, onOutput: (BigInteger) -> Unit): Instr {
+    val prefixed = prefix(data[index] ?: BigInteger.ZERO)
     val opcode = prefixed.substring(prefixed.length - 2).toInt()
     val modes = prefixed.substring(0, 3).reversed().map { parseMode(it) }
 
     return when (opcode) {
         1 -> Add(
                 listOf(
-                        Param(data[index + 1], modes[0]),
-                        Param(data[index + 2], modes[1]),
-                        Param(data[index + 3], modes[2])
+                        Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0]),
+                        Param(data[index + 2.toBigInteger()] ?: BigInteger.ZERO, modes[1]),
+                        Param(data[index + 3.toBigInteger()] ?: BigInteger.ZERO, modes[2])
                 )
         )
         2 -> Multiply(
                 listOf(
-                        Param(data[index + 1], modes[0]),
-                        Param(data[index + 2], modes[1]),
-                        Param(data[index + 3], modes[2])
+                        Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0]),
+                        Param(data[index + 2.toBigInteger()] ?: BigInteger.ZERO, modes[1]),
+                        Param(data[index + 3.toBigInteger()] ?: BigInteger.ZERO, modes[2])
                 )
         )
         3 -> Input(
                 inputSupplier(), listOf(
-                Param(data[index + 1], modes[0])
+                Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0])
         )
         )
         4 -> Output(
                 listOf(
-                        Param(data[index + 1], modes[0])
+                        Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0])
                 ), onOutput
         )
         5 -> JumpIfTrue(
                 listOf(
-                        Param(data[index + 1], modes[0]),
-                        Param(data[index + 2], modes[1])
+                        Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0]),
+                        Param(data[index + 2.toBigInteger()] ?: BigInteger.ZERO, modes[1])
                 )
         )
         6 -> JumpIfFalse(
                 listOf(
-                        Param(data[index + 1], modes[0]),
-                        Param(data[index + 2], modes[1])
+                        Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0]),
+                        Param(data[index + 2.toBigInteger()] ?: BigInteger.ZERO, modes[1])
                 )
         )
         7 -> LessThan(
                 listOf(
-                        Param(data[index + 1], modes[0]),
-                        Param(data[index + 2], modes[1]),
-                        Param(data[index + 3], modes[2])
+                        Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0]),
+                        Param(data[index + 2.toBigInteger()] ?: BigInteger.ZERO, modes[1]),
+                        Param(data[index + 3.toBigInteger()] ?: BigInteger.ZERO, modes[2])
                 )
         )
         8 -> Equals(
                 listOf(
-                        Param(data[index + 1], modes[0]),
-                        Param(data[index + 2], modes[1]),
-                        Param(data[index + 3], modes[2])
+                        Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0]),
+                        Param(data[index + 2.toBigInteger()] ?: BigInteger.ZERO, modes[1]),
+                        Param(data[index + 3.toBigInteger()] ?: BigInteger.ZERO, modes[2])
                 )
+        )
+        9 -> AdjustRelativeBase(
+            listOf(
+                Param(data[index + 1.toBigInteger()] ?: BigInteger.ZERO, modes[0])
+            )
         )
         99 -> Halt()
         else -> throw RuntimeException("Invalid instruction")
@@ -179,11 +206,12 @@ fun parseMode(it: Char): ParameterMode {
     return when (it) {
         '0' -> ParameterMode.POSITION
         '1' -> ParameterMode.IMMEDIATE
+        '2' -> ParameterMode.RELATIVE
         else -> throw RuntimeException("invalid mode")
     }
 }
 
-fun prefix(value: Int): String {
+fun prefix(value: BigInteger): String {
     var res = value.toString()
     while (res.length < 5) {
         res = "0" + res
