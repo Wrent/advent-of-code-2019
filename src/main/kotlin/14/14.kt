@@ -1,5 +1,6 @@
 import java.math.BigInteger
 import java.math.RoundingMode
+import kotlin.math.ceil
 import kotlin.math.roundToLong
 
 fun main() {
@@ -21,15 +22,12 @@ fun main() {
 
     println("first result")
     run {
-        val required = mutableMapOf<String, Int>()
-        val fuel = chemicals["FUEL"]!!
-        for (i in 0 until 1) {
-            required.addAll(fuel.from)
-        }
+        val required = mutableMapOf<String, Long>()
+        required["FUEL"] = 1
         while (!required.isDone()) {
-            val next = required.getNext()
-            required[next] = required[next]!! - chemicals[next]!!.quantity
-            required.addAll(chemicals[next]!!.from)
+            val next = required.getNext(chemicals)
+            required[next.first] = required[next.first]!! - chemicals[next.first]!!.quantity*next.second
+            required.addAll(chemicals[next.first]!!.from, next.second)
         }
         val result = required["ORE"]!!
         println(result)
@@ -42,59 +40,59 @@ fun main() {
     // 3 -> 271463
     // 100 -> 8325117
     // 100 -> 8409208
-    var prev = 0
-    var diffs = mutableListOf<Int>()
-    for (j in 1 until 252 ) {
-        val required = mutableMapOf<String, Int>()
-        val fuel = chemicals["FUEL"]!!
-        for (i in 0 until j) {
-            required.addAll(fuel.from)
-        }
-        while (!required.isDone()) {
-            val next = required.getNext()
-            required[next] = required[next]!! - chemicals[next]!!.quantity
-            required.addAll(chemicals[next]!!.from)
-        }
-        val result = required["ORE"]!!
-        println("diff ${result - prev}, result $result")
-        diffs.add(result - prev)
-        prev = result
+//    var prev = 0
+//    var diffs = mutableListOf<Int>()
+//    for (j in 1 until 252 ) {
+    val required = mutableMapOf<String, Long>()
+    required["FUEL"] = 12039407
+    while (!required.isDone()) {
+        val next = required.getNext(chemicals)
+        required[next.first] = required[next.first]!! - (chemicals[next.first]!!.quantity*next.second)
+        required.addAll(chemicals[next.first]!!.from, next.second)
     }
-    val avgDiff = diffs.average()
-    println("1000000000000".toBigDecimal().divide(avgDiff.toBigDecimal(), 20, RoundingMode.HALF_UP))
+    val result = required["ORE"]!!
+    println(result)
+//        println("diff ${result - prev}, result $result")
+//        diffs.add(result - prev)
+//        prev = result
+//    }
+//    val avgDiff = diffs.average()
+//    println("1000000000000".toBigDecimal().divide(avgDiff.toBigDecimal(), 20, RoundingMode.HALF_UP))
 }
 
-private fun MutableMap<String, Int>.addAll(from: List<Pair<Int, Chemical>>) {
+private fun MutableMap<String, Long>.addAll(from: List<Pair<Long, Chemical>>, amount: Long) {
     from.forEach {
         if (this[it.second.name] == null) {
-            this.put(it.second.name, it.first)
+            this.put(it.second.name, it.first*amount)
         } else {
-            this[it.second.name] = this[it.second.name]!! + it.first
+            this[it.second.name] = this[it.second.name]!! + (it.first*amount)
         }
     }
 }
 
-private fun MutableMap<String, Int>.isDone(): Boolean {
+private fun MutableMap<String, Long>.isDone(): Boolean {
     return this
-        .filter { it.key != "ORE"}
+        .filter { it.key != "ORE" }
         .filter { it.value > 0 }
         .count() == 0
 }
 
-private fun MutableMap<String, Int>.getNext(): String {
-    return this
-    .filter { it.key != "ORE"}
-    .filter { it.value > 0 }
-    .entries
-    .first().key
+private fun MutableMap<String, Long>.getNext(chemicals: Map<String, Chemical>): Pair<String, Long> {
+    val next = this
+        .filter { it.key != "ORE" }
+        .filter { it.value > 0 }
+        .entries
+        .first()
+    val chemical = chemicals[next.key]!!
+    return Pair(next.key, ceil(next.value.toDouble() / chemical.quantity).toLong())
 }
 
-fun parseChemical(chemical: String): Pair<Int, String> {
+fun parseChemical(chemical: String): Pair<Long, String> {
     val (quantity, name) = chemical.split(" ")
-    return Pair(quantity.toInt(), name)
+    return Pair(quantity.toLong(), name)
 }
 
-data class Chemical(val name: String, val quantity: Int = 0, val from: List<Pair<Int, Chemical>> = mutableListOf())
+data class Chemical(val name: String, val quantity: Long = 0, val from: List<Pair<Long, Chemical>> = mutableListOf())
 
 const val TEST141 = """10 ORE => 10 A
 1 ORE => 1 B
