@@ -78,7 +78,7 @@ class Output(params: List<Param>, val onOutput: (BigInteger) -> Unit) : Instr(pa
     override fun apply(data: MutableMap<BigInteger, BigInteger>, index: BigInteger): BigInteger {
         output = pval(params[0], data)
         onOutput(output)
-        println(output)
+//        println(output)
         return index + 2.toBigInteger()
     }
 }
