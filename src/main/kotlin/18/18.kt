@@ -1,12 +1,12 @@
 fun main() {
     val underground = mutableMapOf<Coord, Underground>()
-    INPUT18.split("\n")
-        .forEachIndexed { i, row ->
-            row.split("").filter { it != "" }.forEachIndexed { j, cell ->
-                val coord = Coord(i, j)
-                underground[coord] = Underground(coord, undergroundBlock(cell[0]), Int.MAX_VALUE, listOf())
+    TEST184.split("\n")
+            .forEachIndexed { i, row ->
+                row.split("").filter { it != "" }.forEachIndexed { j, cell ->
+                    val coord = Coord(i, j)
+                    underground[coord] = Underground(coord, undergroundBlock(cell[0]), Int.MAX_VALUE, listOf())
+                }
             }
-        }
     underground.values.forEach {
         val validNeighbours = mutableListOf<Underground>()
         processNeighbour(it.coord.north(), underground, validNeighbours)
@@ -21,8 +21,8 @@ fun main() {
     val keys = underground.values
             .filter { it.block is Key || it.block is Entrance }
 
-    keys.forEach{first ->
-        keys.forEach{second ->
+    keys.forEach { first ->
+        keys.forEach { second ->
             if (first !== second) {
                 if (keyPairs[Pair(second.coord, first.coord)] == null) {
                     keyPairs[Pair(first.coord, second.coord)] = getDistanceWithRequiredKeys(first, second)
@@ -34,12 +34,11 @@ fun main() {
     val entrance = underground.values.first { it.block is Entrance }
 
     val pickedKeys = mutableSetOf<Char>('@')
-        val results = mutableListOf<Int>()
+    val results = mutableListOf<Int>()
 ////    val closedDoors = mutableSetOf<Char>()
     println("first result")
 
     start(entrance, pickedKeys, keyPairs, underground, results, 0)
-
 
 
 //    val current = entrance
@@ -70,7 +69,17 @@ fun start(current: Underground, pickedKeys: MutableSet<Char>, keyPairs: MutableM
     val availableKeys = keyPairs
             .filter { it.key.first == current.coord || it.key.second == current.coord }
             .filter { pickedKeys.containsAll(it.value.second) }
-
+            .filter {
+                val next = if (it.key.first == current.coord) {
+                    underground[it.key.second]!!
+                } else {
+                    underground[it.key.first]!!
+                }
+                !pickedKeys.contains(next.block.char)
+            }
+//            .entries.toList()
+//            .sortedBy { it.value.first }
+    println(availableKeys)
     availableKeys.forEach lambda@{
         // move to this key
         val next = if (it.key.first == current.coord) {
@@ -149,7 +158,7 @@ fun getDistanceWithRequiredKeys(first: Underground, second: Underground): Pair<I
             .minBy { it.first }!!
 }
 
-fun find(current: Underground, second: Underground, requiredKeys: MutableSet<Char>, visited: MutableSet<Coord>, steps: Int) : List<Pair<Int, MutableSet<Char>>> {
+fun find(current: Underground, second: Underground, requiredKeys: MutableSet<Char>, visited: MutableSet<Coord>, steps: Int): List<Pair<Int, MutableSet<Char>>> {
     if (current == second) {
         return listOf(Pair(steps, requiredKeys))
     }
@@ -173,9 +182,9 @@ fun findAvailableKeys(current: Underground, pickedKeys: MutableSet<Char>, visite
     visited.add(current.coord)
 
     val list = current.validNeighbors
-        .filter { !visited.contains(it.coord) }
-        .filter { canBeOpened(it, pickedKeys) }
-        .flatMap { findAvailableKeys(it, pickedKeys, HashSet(visited), steps + 1) } + resultList
+            .filter { !visited.contains(it.coord) }
+            .filter { canBeOpened(it, pickedKeys) }
+            .flatMap { findAvailableKeys(it, pickedKeys, HashSet(visited), steps + 1) } + resultList
     return list.shuffled()
 }
 
