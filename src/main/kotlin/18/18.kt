@@ -46,35 +46,59 @@ fun main() {
 
 }
 
+val cache = mutableMapOf<Coord, MutableMap<Set<Char>, List<Pair<Coord, Int>>>>()
+
 fun process(current: Underground, pickedKeys: MutableSet<Char>, underground: MutableMap<Coord, Underground>, steps: Int, results: MutableList<Int>) {
-    val keys = findAvailableKeys(current, pickedKeys, mutableSetOf(), steps)
+    val keys = cache[current.coord]?.get(pickedKeys.toSortedSet())?.apply { println("cache hit") } ?: run {
+        val tmp = findAvailableKeys(current, pickedKeys, mutableSetOf(), 0)
+        cache.putIfAbsent(current.coord, mutableMapOf())
+        cache[currentCoord]?.put(pickedKeys.toSortedSet(), tmp)
+        tmp
+    }
+//    println(keys)
+//    println(current)
+    val minA = results.min() ?: Int.MAX_VALUE
+    if (steps >= minA) {
+        return
+    }
     keys.forEach {
         // move to this key
         val next = underground[it.first]!!
+        val min = results.min() ?: Int.MAX_VALUE
+        println("${steps + it.second} $next $pickedKeys $min")
+        if (pickedKeys.contains(next.block.char) || steps + it.second >= min) {
+            return
+        }
         // pick this key
         val pickedKeysCopy = HashSet(pickedKeys)
         pickedKeysCopy.add(next.block.char)
         //check results
         if (!underground.hasKeys(pickedKeysCopy)) {
-            results.add(it.second)
+//            println("adding ${it.second}")
+            results.add(steps + it.second)
             return
         }
+//        cache.putIfAbsent(next.coord, mutableMapOf())
+//        cache[next.coord]!![pickedKeysCopy] = it.second
         // find available keys for this key and do the same
-        process(next, pickedKeysCopy, underground, it.second, results)
+        process(next, pickedKeysCopy, underground, steps + it.second, results)
     }
+//    println("exiting")
 }
 
 
 fun findAvailableKeys(current: Underground, pickedKeys: MutableSet<Char>, visited: MutableSet<Coord>, steps: Int): List<Pair<Coord, Int>> {
+    val resultList = mutableListOf<Pair<Coord, Int>>()
     if (current.block is Key && !pickedKeys.contains(current.block.char)) {
-        return listOf(Pair(current.coord, steps))
+        resultList.add(Pair(current.coord, steps))
     }
     visited.add(current.coord)
 
-    return current.validNeighbors
+    val list = current.validNeighbors
         .filter { !visited.contains(it.coord) }
         .filter { canBeOpened(it, pickedKeys) }
-        .flatMap { findAvailableKeys(it, pickedKeys, HashSet(visited), steps + 1) }
+        .flatMap { findAvailableKeys(it, pickedKeys, HashSet(visited), steps + 1) } + resultList
+    return list.shuffled()
 }
 
 fun canBeOpened(it: Underground, pickedKeys: MutableSet<Char>): Boolean {
@@ -169,7 +193,11 @@ private fun MutableMap<Coord, Underground>.hasKeys(pickedKeys: MutableSet<Char>)
     return this.values.filter { it.block is Key }.map { it.block.char }.toSet() != pickedKeys
 }
 
-data class Underground(val coord: Coord, val block: UndergroundBlock, var steps: Int, var validNeighbors: List<Underground>)
+data class Underground(val coord: Coord, val block: UndergroundBlock, var steps: Int, var validNeighbors: List<Underground>) {
+    override fun toString(): String {
+        return "Underground(coord=$coord, block=$block)"
+    }
+}
 
 fun undergroundBlock(char: Char): UndergroundBlock {
     return when (char) {
@@ -188,6 +216,7 @@ fun undergroundBlock(char: Char): UndergroundBlock {
 
 sealed class UndergroundBlock(val char: Char)
 
+
 class Wall : UndergroundBlock('#')
 class Empty : UndergroundBlock('.')
 class Entrance : UndergroundBlock('@')
@@ -197,6 +226,11 @@ class Door(char: Char) : UndergroundBlock(char) {
 
 class Key(char: Char) : UndergroundBlock(char) {
     fun door(): Char = this.char.toUpperCase()
+    override fun toString(): String {
+        return "Key($char)"
+    }
+
+
 }
 
 const val TEST181 = """#########
