@@ -16,16 +16,36 @@ fun main() {
         it.validNeighbors = validNeighbours
     }
 
+    val keyPairs = mutableMapOf<Pair<Coord, Coord>, Pair<Int, MutableSet<Char>>>()
+
+    val keys = underground.values
+            .filter { it.block is Key || it.block is Entrance }
+
+    keys.forEach{first ->
+        keys.forEach{second ->
+            if (first !== second) {
+                if (keyPairs[Pair(second.coord, first.coord)] == null) {
+                    keyPairs[Pair(first.coord, second.coord)] = getDistanceWithRequiredKeys(first, second)
+                }
+            }
+        }
+    }
+
     val entrance = underground.values.first { it.block is Entrance }
 
-    val pickedKeys = mutableSetOf<Char>()
-//    val closedDoors = mutableSetOf<Char>()
+    val pickedKeys = mutableSetOf<Char>('@')
+        val results = mutableListOf<Int>()
+////    val closedDoors = mutableSetOf<Char>()
     println("first result")
-    val results = mutableListOf<Int>()
-    val current = entrance
 
-    process(current, pickedKeys, underground, 0, results)
+    start(entrance, pickedKeys, keyPairs, underground, results, 0)
 
+
+
+//    val current = entrance
+//
+//    process(current, pickedKeys, underground, 0, results)
+//
     println(results.min())
 
 //    while (true) {
@@ -44,6 +64,41 @@ fun main() {
 //    enter(underground, entrance, pickedKeys, closedDoors, 0)
 //    probe(underground, entrance.coord, 0, mutableSetOf())
 
+}
+
+fun start(current: Underground, pickedKeys: MutableSet<Char>, keyPairs: MutableMap<Pair<Coord, Coord>, Pair<Int, MutableSet<Char>>>, underground: MutableMap<Coord, Underground>, results: MutableList<Int>, steps: Int) {
+    val availableKeys = keyPairs
+            .filter { it.key.first == current.coord || it.key.second == current.coord }
+            .filter { pickedKeys.containsAll(it.value.second) }
+
+    availableKeys.forEach lambda@{
+        // move to this key
+        val next = if (it.key.first == current.coord) {
+            underground[it.key.second]!!
+        } else {
+            underground[it.key.first]!!
+        }
+        if (pickedKeys.contains(next.block.char)) {
+            return@lambda
+        }
+        val distance = keyPairs[it.key]!!.first
+        val min = results.min() ?: Int.MAX_VALUE
+        println("${steps + distance} $next $pickedKeys $min")
+        if (steps + distance >= min) {
+            return@lambda
+        }
+        // pick this key
+        val pickedKeysCopy = HashSet(pickedKeys)
+        pickedKeysCopy.add(next.block.char)
+        //check results
+        if (!underground.hasKeys(pickedKeysCopy)) {
+//            println("adding ${it.second}")
+            results.add(steps + distance)
+            return@lambda
+        }
+        // find available keys for this key and do the same
+        start(next, pickedKeysCopy, keyPairs, underground, results, steps + distance)
+    }
 }
 
 val cache = mutableMapOf<Coord, MutableMap<Set<Char>, List<Pair<Coord, Int>>>>()
@@ -84,6 +139,29 @@ fun process(current: Underground, pickedKeys: MutableSet<Char>, underground: Mut
         process(next, pickedKeysCopy, underground, steps + it.second, results)
     }
 //    println("exiting")
+}
+
+fun getDistanceWithRequiredKeys(first: Underground, second: Underground): Pair<Int, MutableSet<Char>> {
+    val requiredKeys = mutableSetOf<Char>()
+    val visited = mutableSetOf<Coord>()
+
+    return find(first, second, requiredKeys, visited, 0)
+            .minBy { it.first }!!
+}
+
+fun find(current: Underground, second: Underground, requiredKeys: MutableSet<Char>, visited: MutableSet<Coord>, steps: Int) : List<Pair<Int, MutableSet<Char>>> {
+    if (current == second) {
+        return listOf(Pair(steps, requiredKeys))
+    }
+
+    val newKeys = HashSet(requiredKeys)
+    if (current.block is Door) {
+        newKeys.add(current.block.key())
+    }
+    visited.add(current.coord)
+    return current.validNeighbors
+            .filter { !visited.contains(it.coord) }
+            .flatMap { find(it, second, newKeys, visited, steps + 1) }
 }
 
 
@@ -190,7 +268,7 @@ private fun MutableMap<Coord, Underground>.hasKeys(): Boolean {
 }
 
 private fun MutableMap<Coord, Underground>.hasKeys(pickedKeys: MutableSet<Char>): Boolean {
-    return this.values.filter { it.block is Key }.map { it.block.char }.toSet() != pickedKeys
+    return !pickedKeys.containsAll(this.values.filter { it.block is Key }.map { it.block.char }.toSet())
 }
 
 data class Underground(val coord: Coord, val block: UndergroundBlock, var steps: Int, var validNeighbors: List<Underground>) {
