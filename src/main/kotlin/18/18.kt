@@ -1,6 +1,6 @@
 fun main() {
     val underground = mutableMapOf<Coord, Underground>()
-    TEST184.split("\n")
+    INPUT18.split("\n")
             .forEachIndexed { i, row ->
                 row.split("").filter { it != "" }.forEachIndexed { j, cell ->
                     val coord = Coord(i, j)
@@ -79,6 +79,7 @@ fun start(current: Underground, pickedKeys: MutableSet<Char>, keyPairs: MutableM
             }
 //            .entries.toList()
 //            .sortedBy { it.value.first }
+//            .take(3)
     println(availableKeys)
     availableKeys.forEach lambda@{
         // move to this key
@@ -91,7 +92,7 @@ fun start(current: Underground, pickedKeys: MutableSet<Char>, keyPairs: MutableM
             return@lambda
         }
         val distance = keyPairs[it.key]!!.first
-        val min = results.min() ?: Int.MAX_VALUE
+        val min = results.min() ?: 2974
         println("${steps + distance} $next $pickedKeys $min")
         if (steps + distance >= min) {
             return@lambda
