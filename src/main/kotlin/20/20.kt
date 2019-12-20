@@ -22,7 +22,7 @@ fun main() {
     input.forEach { coord, cell ->
         if (isLetter(cell)) {
             val (label, portalCoord) = readLabel(input, cell, coord)
-            maze[portalCoord] = Maze(portalCoord, MazePortal(label))
+            maze[portalCoord] = Maze(portalCoord, MazePortal(label, if (isOuter(coord, input)) -1 else 1))
         }
     }
 
@@ -35,7 +35,7 @@ fun main() {
                 .forEach { (it.value.mazeBlock as MazePortal).portsTo = mazePortal.key }
         }
     maze.values.forEach {
-        val validNeighbours = mutableListOf<Maze>()
+        val validNeighbours = mutableListOf<Pair<Maze, Int>>()
         processMazeNeighbour(it.coord.north(), maze, validNeighbours)
         processMazeNeighbour(it.coord.south(), maze, validNeighbours)
         processMazeNeighbour(it.coord.east(), maze, validNeighbours)
@@ -43,36 +43,61 @@ fun main() {
         val current = maze[it.coord]!!.mazeBlock
         if (current is MazePortal) {
             if (current.portsTo != null) {
-                validNeighbours.add(maze[current.portsTo!!]!!)
+                validNeighbours.add(Pair(maze[current.portsTo!!]!!, current.levelChange))
             }
         }
         it.validNeighbors = validNeighbours
     }
 
-    val start = maze.values.first { it.mazeBlock is MazePortal && it.mazeBlock.label == "AA" }
+    val start = maze.values.first { it.mazeBlock is MazePortal && it.mazeBlock.label == "AA" }.also { (it.mazeBlock as MazePortal).levelChange = 0 }
+    val end = maze.values.first { it.mazeBlock is MazePortal && it.mazeBlock.label == "ZZ" }.also { (it.mazeBlock as MazePortal).levelChange = 0 }
 
-    processMazeBlock(start, 0)
+    processMazeBlock(start, 0, 0)
 
-    println("first result")
-    val end = maze.values.first { it.mazeBlock is MazePortal && it.mazeBlock.label == "ZZ" }
-    println(end.steps)
+    println("second result")
+    println(end.steps[0])
 }
 
-fun processMazeBlock(current: Maze, steps: Int) {
-    current.steps = steps
+fun isOuter(coord: Coord, input: MutableMap<Coord, String>): Boolean {
+    val maxX = input.keys.maxBy { it.x }!!.x
+    val maxY = input.keys.maxBy { it.y }!!.y
+
+    val minX = input.keys.minBy { it.x }!!.x
+    val minY = input.keys.minBy { it.y }!!.y
+
+    return coord.x == maxX || coord.x == maxX - 1 || coord.x == minX || coord.x == minX + 1 || coord.y == maxY || coord.y == maxY - 1 || coord.y == minY || coord.y == minY + 1
+}
+
+fun processMazeBlock(current: Maze, steps: Int, level: Int) {
+    if (level < 0 || level > 30) {
+        return
+    }
+    if (current.mazeBlock is MazePortal) {
+        println("Walking through ${current.mazeBlock.label} on level $level with $steps steps")
+    }
+
+    current.steps[level] = steps
 
     current.validNeighbors
-        .filter { it.steps > steps }
-        .forEach { processMazeBlock(it, steps + 1) }
+        .filter { it.first.steps[level + it.second] ?: Int.MAX_VALUE > steps }
+        .forEach { processMazeBlock(it.first, steps + 1, level + it.second) }
 }
 
-fun processMazeNeighbour(coord: Coord, maze: MutableMap<Coord, Maze>, validNeighbors: MutableList<Maze>) {
+fun getLevelChange(it: Maze): Int {
+    return if (it.mazeBlock is MazePortal) {
+        it.mazeBlock.levelChange
+    } else {
+        0
+    }
+}
+
+fun processMazeNeighbour(coord: Coord, maze: MutableMap<Coord, Maze>, validNeighbors: MutableList<Pair<Maze, Int>>) {
     val block = maze[coord] ?: return
     when (block.mazeBlock) {
         is MazeWall -> return
         is MazeNothing -> return
     }
-    validNeighbors.add(block)
+    validNeighbors.add(Pair(block, 0))
 }
 
 private fun readLabel(input: Map<Coord, String>, cell: String, coord: Coord): Pair<String, Coord> {
@@ -114,8 +139,8 @@ private fun isLetter(cell: String?): Boolean {
 }
 
 data class Maze(val coord: Coord, val mazeBlock: MazeBlock) {
-    var validNeighbors = mutableListOf<Maze>()
-    var steps = Int.MAX_VALUE
+    var validNeighbors = mutableListOf<Pair<Maze, Int>>()
+    var steps = mutableMapOf<Int, Int>()
 }
 
 sealed class MazeBlock(val char: Char)
@@ -123,10 +148,10 @@ sealed class MazeBlock(val char: Char)
 class MazeNothing : MazeBlock(' ')
 class MazeWall : MazeBlock('#')
 class MazeHall : MazeBlock('.')
-class MazePortal(val label: String) : MazeBlock('.') {
+class MazePortal(val label: String, var levelChange: Int) : MazeBlock('.') {
     var portsTo: Coord? = null
     override fun toString(): String {
-        return "MazePortal(label='$label', portsTo=$portsTo)"
+        return "MazePortal(label='$label', levelChange=$levelChange, portsTo=$portsTo)"
     }
 
 
@@ -152,6 +177,45 @@ FG..#########.....#
   ###########.#####  
              Z       
              Z       """
+
+const val TEST202 = """
+             Z L X W       C                 
+             Z P Q B       K                 
+  ###########.#.#.#.#######.###############  
+  #...#.......#.#.......#.#.......#.#.#...#  
+  ###.#.#.#.#.#.#.#.###.#.#.#######.#.#.###  
+  #.#...#.#.#...#.#.#...#...#...#.#.......#  
+  #.###.#######.###.###.#.###.###.#.#######  
+  #...#.......#.#...#...#.............#...#  
+  #.#########.#######.#.#######.#######.###  
+  #...#.#    F       R I       Z    #.#.#.#  
+  #.###.#    D       E C       H    #.#.#.#  
+  #.#...#                           #...#.#  
+  #.###.#                           #.###.#  
+  #.#....OA                       WB..#.#..ZH
+  #.###.#                           #.#.#.#  
+CJ......#                           #.....#  
+  #######                           #######  
+  #.#....CK                         #......IC
+  #.###.#                           #.###.#  
+  #.....#                           #...#.#  
+  ###.###                           #.#.#.#  
+XF....#.#                         RF..#.#.#  
+  #####.#                           #######  
+  #......CJ                       NM..#...#  
+  ###.#.#                           #.###.#  
+RE....#.#                           #......RF
+  ###.###        X   X       L      #.#.#.#  
+  #.....#        F   Q       P      #.#.#.#  
+  ###.###########.###.#######.#########.###  
+  #.....#...#.....#.......#...#.....#.#...#  
+  #####.#.###.#######.#######.###.###.#.#.#  
+  #.......#.......#.#.#.#.#...#...#...#.#.#  
+  #####.###.#####.#.#.#.#.###.###.#.###.###  
+  #.......#.....#.#...#...............#...#  
+  #############.#.#.###.###################  
+               A O F   N                     
+               A A D   M                     """
 
 const val INPUT20 = """
                                        I           N S       T       Q     I         K                                         
