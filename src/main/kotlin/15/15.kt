@@ -9,6 +9,7 @@ fun main() {
 
     var index = BigInteger.ZERO
     relativeBase = BigInteger.ZERO
+    println("first result")
     try {
         while (true) {
             val instr = parseInstr(index, data, { droidInput(ship) }, {
@@ -17,9 +18,9 @@ fun main() {
             index = instr.apply(data, index)
         }
     } catch (ex: HaltException) {
-        println("first result")
     }
 }
+var oxygenCoord = Coord(0,0)
 
 fun droidInput(ship: MutableMap<Coord, ShipBlock>): BigInteger {
     when (lastOutput) {
@@ -36,7 +37,9 @@ fun droidInput(ship: MutableMap<Coord, ShipBlock>): BigInteger {
         }
         2 -> {
             ship[current] = ShipBlock(ship[prev]!!.steps + 1, ShipBlockType.OXYGEN)
-            throw RuntimeException("${ship[current]!!.steps}")
+            println("${ship[current]!!.steps}")
+            oxygenCoord = current
+            throw HaltException()
         }
     }
     prev = current
