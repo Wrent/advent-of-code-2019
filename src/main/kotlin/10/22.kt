@@ -1,3 +1,6 @@
+import java.lang.RuntimeException
+import java.math.BigInteger
+
 const val INPUT22size = 10007
 
 fun main() {
@@ -8,12 +11,43 @@ fun main() {
     val operations = INPUT22.split("\n")
             .map { parseShuffleOp(it) }
     var result = cards
-    operations.forEach {
-        result = it.perform(result)
-//        println(result.toList())
+    operations.forEachIndexed { index, i ->
+        result = i.perform(result)
+//        println("$index ${result.toList()}")
     }
     println("first result")
     result.toList().forEachIndexed { index, i -> if (i == 2019) println(index) }
+
+    println("second result")
+//    val numberOfCards = 10007.toBigInteger()
+    val numberOfCards = "119315717514047".toBigInteger()
+    val shuffleCount = "101741582076661".toBigInteger()
+//    val shuffleCount = "1".toBigInteger()
+
+    val reversedOps = operations.reversed()
+
+    var pos = "2020".toBigInteger()
+    reversedOps.forEachIndexed { index, i ->
+        pos = i.getOriginalPosOfPos(pos, numberOfCards)
+//        println("$index $pos")
+    }
+    println(pos)
+    val posChange = numberOfCards.minus(pos).plus("2020".toBigInteger())
+    val re = "2020".toBigInteger().minus(posChange.times(shuffleCount)).mod(numberOfCards)
+    println(re)
+
+    pos = "2020".toBigInteger()
+//    var prev = pos
+    for (i in 0 until shuffleCount.longValueExact()) {
+        reversedOps.forEachIndexed { index, i ->
+            pos = i.getOriginalPosOfPos(pos, numberOfCards)
+//        println("$index $pos")
+        }
+//        println("$pos ${prev - pos}")
+//        prev = pos
+        println(i)
+    }
+    println(pos)
 }
 
 fun parseShuffleOp(line: String): ShuffleOp {
@@ -30,6 +64,7 @@ fun parseShuffleOp(line: String): ShuffleOp {
 
 interface ShuffleOp {
     fun perform(input: IntArray): IntArray
+    fun getOriginalPosOfPos(pos: BigInteger, numberOfCards: BigInteger): BigInteger
 }
 
 class DealIntoNew : ShuffleOp {
@@ -38,9 +73,13 @@ class DealIntoNew : ShuffleOp {
         new.reverse()
         return new
     }
+
+    override fun getOriginalPosOfPos(pos: BigInteger, numberOfCards: BigInteger): BigInteger {
+        return numberOfCards.minus(BigInteger.ONE).minus(pos)
+    }
 }
 
-class CutCards(val n: Int): ShuffleOp {
+class CutCards(val n: Int) : ShuffleOp {
     override fun perform(input: IntArray): IntArray {
         if (n > 0) {
             return (input.takeLast(input.size - n) + input.take(n)).toIntArray()
@@ -48,18 +87,41 @@ class CutCards(val n: Int): ShuffleOp {
             return (input.takeLast(n * -1) + input.take(input.size + n)).toIntArray()
         }
     }
+
+    override fun getOriginalPosOfPos(pos: BigInteger, numberOfCards: BigInteger): BigInteger {
+        return (pos + n.toBigInteger()).mod(numberOfCards)
+    }
 }
 
-class DealWithIncrement(val n: Int): ShuffleOp {
+class DealWithIncrement(val n: Int) : ShuffleOp {
     override fun perform(input: IntArray): IntArray {
         val new = IntArray(INPUT22size)
         val iterator = input.iterator()
         var pos = 0
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             new[pos] = iterator.nextInt()
             pos = (pos + n) % input.size
         }
         return new
+    }
+
+    override fun getOriginalPosOfPos(pos: BigInteger, numberOfCards: BigInteger): BigInteger {
+        var origPos = pos
+        while (origPos.mod(n.toBigInteger()) != BigInteger.ZERO) {
+            origPos += numberOfCards
+        }
+        return origPos.divide(n.toBigInteger()).mod(numberOfCards)
+//        val iterator = (0 until numberOfCards.longValueExact()).iterator()
+//        var pos = BigInteger.ZERO
+//        var i = 0
+//        while (iterator.hasNext()) {
+//            if (pos == input) {
+//                return i.toBigInteger()
+//            }
+//            pos = (pos + n.toBigInteger()).mod(numberOfCards)
+//            i++
+//        }
+//        throw RuntimeException()
     }
 }
 
