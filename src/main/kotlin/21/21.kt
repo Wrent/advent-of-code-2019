@@ -9,7 +9,8 @@ fun main() {
     try {
         while (true) {
             val instr = parseInstr(index, data, { inputInstructions() }, {
-                print(it.toInt().toChar())
+                print("$it ${it.toInt().toChar()}")
+//                print("${it.toInt().toChar()}")
             })
             index = instr.apply(data, index)
         }
@@ -32,15 +33,29 @@ fun springdroid(a: Boolean, b: Boolean, c: Boolean, d: Boolean) {
     }
 }
 
-// @#..# -> jump
+// Af -> jump
+// At, Bf, Cf -> jump
+
+//val inputInstructions =
+//        """NOT A J
+//NOT B T
+//AND D T
+//OR T J
+//NOT C T
+//AND D T
+//OR T J
+//WALK
+//""".toCharArray().toList().iterator()
 
 val inputInstructions =
-        """NOT A T
-AND B T
-AND C T
-AND D T
+        """NOT B T
+NOT C J
 OR T J
-WALK
+AND D J
+AND H J
+NOT A T
+OR T J
+RUN
 """.toCharArray().toList().iterator()
 
 fun inputInstructions() : BigInteger {
