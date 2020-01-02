@@ -36,18 +36,18 @@ fun main() {
     val re = "2020".toBigInteger().minus(posChange.times(shuffleCount)).mod(numberOfCards)
     println(re)
 
-    pos = "2020".toBigInteger()
-//    var prev = pos
-    for (i in 0 until shuffleCount.longValueExact()) {
-        reversedOps.forEachIndexed { index, i ->
-            pos = i.getOriginalPosOfPos(pos, numberOfCards)
-//        println("$index $pos")
-        }
-//        println("$pos ${prev - pos}")
-//        prev = pos
-        println(i)
-    }
-    println(pos)
+//    pos = "2020".toBigInteger()
+////    var prev = pos
+//    for (i in 0 until shuffleCount.longValueExact()) {
+//        reversedOps.forEachIndexed { index, i ->
+//            pos = i.getOriginalPosOfPos(pos, numberOfCards)
+////        println("$index $pos")
+//        }
+////        println("$pos ${prev - pos}")
+////        prev = pos
+//        println(i)
+//    }
+//    println(pos)
 }
 
 fun parseShuffleOp(line: String): ShuffleOp {
